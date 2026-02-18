@@ -1,0 +1,905 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>AI Workforce Productivity Simulator — CFO Grade</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700&display=swap" rel="stylesheet" />
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  min-height: 100vh;
+  background: #080f1a;
+  color: #e2e8f0;
+  font-family: 'DM Sans', 'Segoe UI', sans-serif;
+  font-size: 14px;
+}
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: #0a1628; }
+::-webkit-scrollbar-thumb { background: #1e3a5f; border-radius: 3px; }
+button { cursor: pointer; font-family: inherit; }
+
+/* ── HEADER ── */
+header {
+  background: #0a1628;
+  border-bottom: 1px solid #1e293b;
+  padding: 0 28px;
+  display: flex; align-items: center; justify-content: space-between;
+  height: 58px; position: sticky; top: 0; z-index: 200; gap: 16px;
+}
+.logo {
+  font-size: 13px; font-weight: 700; letter-spacing: .05em;
+  color: #f8fafc; display: flex; align-items: center; gap: 8px; white-space: nowrap;
+}
+.logo-sq { width: 20px; height: 20px; background: #1d4ed8; border-radius: 4px; flex-shrink: 0; }
+.logo-accent { color: #60a5fa; }
+.logo-badge {
+  font-size: 9px; color: #334155; letter-spacing: .12em;
+  border: 1px solid #1e293b; border-radius: 3px; padding: 2px 6px; margin-left: 4px;
+}
+.nav { display: flex; gap: 2px; }
+.nav-btn {
+  padding: 7px 16px; border-radius: 6px; border: none;
+  font-size: 13px; font-weight: 500; background: transparent;
+  color: #475569; transition: all .15s; display: flex; align-items: center; gap: 6px;
+}
+.nav-btn:hover { color: #94a3b8; background: #0f172a; }
+.nav-btn.active { background: #1d4ed8; color: #fff; }
+.nav-step {
+  width: 18px; height: 18px; border-radius: 50%; background: #1e293b;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 10px; font-weight: 700; flex-shrink: 0;
+}
+.nav-btn.active .nav-step { background: rgba(255,255,255,.2); }
+.hkpi-label { font-size: 10px; color: #475569; letter-spacing: .06em; text-transform: uppercase; }
+.hkpi-value { font-size: 17px; font-weight: 700; font-family: monospace; text-align: right; }
+
+/* ── LAYOUT ── */
+main { padding: 28px 28px 60px; max-width: 1320px; margin: 0 auto; }
+.page { display: none; }
+.page.active { display: block; }
+.section-title {
+  font-size: 10px; font-weight: 700; letter-spacing: .14em;
+  color: #3B82F6; text-transform: uppercase; margin-bottom: 20px;
+  display: flex; align-items: center; gap: 10px;
+}
+.section-title::after { content:''; flex:1; height:1px; background:#1e293b; }
+.card {
+  background: #0d1b2e; border: 1px solid #1e293b;
+  border-radius: 12px; padding: 22px 24px; margin-bottom: 18px;
+}
+.card-title {
+  font-size: 13px; font-weight: 600; color: #f1f5f9;
+  margin-bottom: 18px; display: flex; align-items: center; gap: 8px;
+}
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; align-items: start; }
+.grid4 { display: grid; grid-template-columns: repeat(4,1fr); gap: 14px; }
+@media(max-width:1000px) { .grid4 { grid-template-columns: repeat(2,1fr); } }
+@media(max-width:700px)  { .grid2 { grid-template-columns: 1fr; } }
+
+/* ── INPUTS ── */
+input[type=number] { -moz-appearance: textfield; }
+input[type=number]::-webkit-outer-spin-button,
+input[type=number]::-webkit-inner-spin-button { -webkit-appearance: none; }
+.inp {
+  background: #0a1628; border: 1px solid #253347;
+  border-radius: 6px; padding: 7px 10px;
+  color: #e2e8f0; font-size: 13px; font-family: inherit;
+  outline: none; transition: border-color .15s; width: 100%;
+}
+.inp:focus { border-color: #3B82F6; }
+.field { display: flex; flex-direction: column; gap: 5px; }
+.field label { font-size: 11px; color: #64748b; }
+.params-row { display: flex; gap: 16px; flex-wrap: wrap; align-items: flex-end; }
+.params-row .field { min-width: 140px; }
+.pfx-wrap { display: flex; }
+.pfx-wrap .pfx {
+  background: #0a1628; border: 1px solid #253347; border-right: none;
+  border-radius: 6px 0 0 6px; padding: 7px 9px;
+  color: #475569; font-size: 12px; white-space: nowrap;
+}
+.pfx-wrap .inp { border-radius: 0 6px 6px 0; }
+
+/* compact table input */
+.ci {
+  background: #0a1628; border: 1px solid #1e3a5f;
+  border-radius: 5px; padding: 6px 9px;
+  color: #e2e8f0; font-size: 13px; font-family: monospace;
+  outline: none; text-align: right; transition: border-color .15s;
+}
+.ci:focus { border-color: #3B82F6; }
+.ci-w80 { width: 80px; }
+.ci-w100 { width: 100px; }
+.euro-wrap { display: flex; align-items: stretch; }
+.euro-sym {
+  background: #0a1628; border: 1px solid #1e3a5f; border-right: none;
+  border-radius: 5px 0 0 5px; padding: 6px 8px;
+  color: #475569; font-size: 12px; display: flex; align-items: center;
+}
+.euro-inp {
+  background: #0a1628; border: 1px solid #1e3a5f; border-left: none;
+  border-radius: 0 5px 5px 0; padding: 6px 9px;
+  color: #e2e8f0; font-size: 13px; font-family: monospace;
+  outline: none; width: 80px; text-align: right;
+  transition: border-color .15s;
+}
+.euro-inp:focus { border-color: #3B82F6; }
+.euro-wrap:focus-within .euro-sym { border-color: #3B82F6; }
+
+/* ── ROLE TABS ── */
+.role-tabs { display: flex; gap: 6px; margin-bottom: 18px; flex-wrap: wrap; }
+.role-tab {
+  padding: 7px 16px; border-radius: 7px; border: 1px solid #1e293b;
+  background: transparent; font-size: 12px; font-weight: 500;
+  color: #64748b; transition: all .15s;
+  display: flex; align-items: center; gap: 8px;
+}
+.role-tab:hover { border-color: #334155; color: #94a3b8; }
+.role-tab.active {
+  border-color: var(--rc);
+  background: color-mix(in srgb, var(--rc) 10%, transparent);
+  color: var(--rc);
+}
+.tab-count {
+  background: #1e293b; color: #475569;
+  border-radius: 4px; padding: 1px 6px;
+  font-size: 10px; font-weight: 700; font-family: monospace;
+}
+.role-tab.active .tab-count {
+  background: color-mix(in srgb, var(--rc) 20%, transparent);
+  color: var(--rc);
+}
+
+/* ── WORKFORCE TABLE ── */
+.wf-table { width: 100%; border-collapse: collapse; }
+.wf-table th {
+  font-size: 10px; color: #475569; text-transform: uppercase;
+  letter-spacing: .08em; padding: 8px 12px;
+  border-bottom: 1px solid #1e293b; text-align: left; white-space: nowrap;
+}
+.wf-table td {
+  padding: 10px 12px; border-bottom: 1px solid #0f172a; vertical-align: middle;
+}
+.wf-table tr:last-child td { border-bottom: none; }
+.wf-table tbody tr:hover td { background: rgba(59,130,246,.025); }
+.geo-cell { display: flex; align-items: center; gap: 9px; }
+.geo-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+.geo-name { font-size: 13px; color: #cbd5e1; }
+.geo-sub { font-size: 10px; color: #334155; margin-top: 1px; }
+.wf-total-row td {
+  background: #0a1628 !important; border-top: 2px solid #1e3a5f !important;
+  border-bottom: none !important;
+}
+.wf-total-lbl { font-size: 11px; font-weight: 700; color: #475569; text-transform: uppercase; letter-spacing: .06em; }
+.wf-total-val { font-size: 16px; font-weight: 700; font-family: monospace; color: #f1f5f9; }
+.ann-cost { font-size: 13px; font-family: monospace; }
+
+/* ── RANGE SLIDER ── */
+input[type=range] {
+  -webkit-appearance: none; appearance: none;
+  height: 4px; background: #1e3a5f; border-radius: 2px;
+  outline: none; cursor: pointer; width: 100%;
+}
+input[type=range]::-webkit-slider-thumb {
+  -webkit-appearance: none; width: 14px; height: 14px;
+  border-radius: 50%; background: #3B82F6; cursor: pointer;
+  border: 2px solid #0d1b2e; box-shadow: 0 0 0 1px #3B82F6;
+}
+.slider-row { margin-bottom: 14px; }
+.slider-hdr { display: flex; justify-content: space-between; margin-bottom: 5px; }
+.slider-lbl { font-size: 11px; color: #94a3b8; }
+.slider-val { font-size: 12px; color: #e2e8f0; font-family: monospace; font-weight: 600; }
+
+/* ── TOGGLE ── */
+.toggle {
+  width: 38px; height: 21px; border-radius: 11px;
+  background: #1e293b; border: none; position: relative;
+  transition: background .2s; flex-shrink: 0;
+}
+.toggle.on { background: #1d4ed8; }
+.toggle-dot {
+  position: absolute; top: 3px; left: 3px;
+  width: 15px; height: 15px; border-radius: 50%;
+  background: #475569; transition: left .2s, background .2s; pointer-events: none;
+}
+.toggle.on .toggle-dot { left: 20px; background: #fff; }
+
+/* ── AGENT CARDS ── */
+.agent-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px,1fr)); gap: 14px; }
+.agent-card {
+  background: #0d1b2e; border: 1px solid #1e3a5f;
+  border-radius: 11px; padding: 18px; transition: opacity .2s, border-color .2s;
+}
+.agent-card.off { opacity: .4; border-color: #1e293b; }
+.agent-hdr { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 16px; }
+.agent-meta { display: flex; align-items: center; gap: 10px; }
+.agent-icon-wrap {
+  width: 36px; height: 36px; border-radius: 8px; background: #0a1628;
+  display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0;
+}
+.agent-name { font-size: 13px; font-weight: 600; color: #f1f5f9; }
+.agent-roles-tag { font-size: 10px; color: #475569; margin-top: 3px; }
+/* role pills inside agent card */
+.role-pills { display: flex; flex-wrap: wrap; gap: 5px; margin: 0 0 14px; }
+.role-pill {
+  padding: 3px 9px; border-radius: 5px; font-size: 11px; font-weight: 500;
+  border: 1px solid #1e293b; background: transparent; color: #475569;
+  cursor: pointer; transition: all .15s; font-family: inherit; line-height: 1.5;
+  display: flex; align-items: center; gap: 5px;
+}
+.role-pill:hover { border-color: #334155; color: #94a3b8; }
+.role-pill.active {
+  background: color-mix(in srgb, var(--pc) 14%, transparent);
+  border-color: var(--pc); color: var(--pc);
+}
+.role-pill .pill-dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: currentColor; flex-shrink: 0;
+}
+.roles-section-lbl {
+  font-size: 9px; color: #334155; text-transform: uppercase;
+  letter-spacing: .1em; margin-bottom: 6px;
+}
+.agent-footer {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-top: 14px; padding-top: 14px; border-top: 1px solid #1e293b;
+}
+.agent-cost-lbl { font-size: 11px; color: #64748b; }
+.agent-preview {
+  margin-top: 12px; padding: 9px 12px;
+  background: #060d18; border: 1px solid #1e3a5f; border-radius: 7px;
+  display: flex; align-items: center; justify-content: space-between;
+}
+.ap-lbl { font-size: 9px; color: #334155; text-transform: uppercase; letter-spacing: .1em; margin-bottom: 3px; }
+.ap-val { font-size: 14px; font-family: monospace; color: #60a5fa; font-weight: 600; }
+
+/* ── RESULTS ── */
+.metric-card {
+  background: #0d1b2e; border-radius: 11px; padding: 18px 20px; margin-bottom: 0;
+  border-top: 3px solid var(--ac);
+  border-left: 1px solid #1a2d45; border-right: 1px solid #1a2d45; border-bottom: 1px solid #1a2d45;
+}
+.metric-lbl { font-size: 10px; color: #475569; text-transform: uppercase; letter-spacing: .08em; margin-bottom: 6px; }
+.metric-val { font-size: 26px; font-weight: 700; font-family: monospace; color: var(--ac); line-height: 1; }
+table { width: 100%; border-collapse: collapse; }
+th { font-size: 10px; color: #475569; text-transform: uppercase; letter-spacing: .08em; padding: 8px 12px; border-bottom: 1px solid #1e293b; text-align: left; white-space: nowrap; }
+td { padding: 10px 12px; border-bottom: 1px solid #0f172a; font-size: 13px; }
+.tr-tot td { border-top: 2px solid #1e3a5f; border-bottom: none; font-weight: 700; }
+.mono { font-family: monospace; }
+.bar-chart { display: flex; flex-direction: column; gap: 7px; }
+.bar-row { display: flex; align-items: center; gap: 10px; }
+.bar-lbl { font-size: 11px; color: #94a3b8; text-align: right; flex-shrink: 0; width: 130px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bar-track { flex: 1; background: #0f172a; border-radius: 3px; height: 18px; overflow: hidden; }
+.bar-fill { height: 100%; border-radius: 3px; transition: width .5s cubic-bezier(.4,0,.2,1); min-width: 2px; }
+.bar-val { font-size: 11px; color: #cbd5e1; font-family: monospace; width: 78px; flex-shrink: 0; }
+.divider { height: 1px; background: #1e293b; margin: 16px 0; }
+.stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.stat-box { padding: 11px 14px; background: #060d18; border-radius: 8px; border: 1px solid #1e293b; }
+.stat-box-lbl { font-size: 10px; color: #334155; text-transform: uppercase; letter-spacing: .06em; margin-bottom: 5px; }
+.stat-box-val { font-size: 14px; font-weight: 600; color: #94a3b8; font-family: monospace; }
+.methodology {
+  background: #0a1628; border: 1px solid #1e293b; border-radius: 10px;
+  padding: 18px 20px; font-size: 11px; color: #334155; line-height: 1.8; margin-top: 0;
+}
+.methodology strong { color: #475569; }
+.overflow-x { overflow-x: auto; }
+.green { color: #10B981; }
+.blue  { color: #60a5fa; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-sq"></div>
+    AI Workforce <span class="logo-accent">&nbsp;Productivity&nbsp;</span> Simulator
+    <span class="logo-badge">CFO-GRADE</span>
+  </div>
+  <nav class="nav">
+    <button class="nav-btn active" onclick="setPage(0)"><span class="nav-step">1</span>Workforce</button>
+    <button class="nav-btn" onclick="setPage(1)"><span class="nav-step">2</span>Agents</button>
+    <button class="nav-btn" onclick="setPage(2)"><span class="nav-step">3</span>Results</button>
+  </nav>
+  <div>
+    <div class="hkpi-label">Net Annual Savings</div>
+    <div class="hkpi-value" id="header-net" style="color:#10B981">—</div>
+  </div>
+</header>
+
+<main>
+
+  <!-- PAGE 1 -->
+  <div class="page active" id="page-0">
+    <div class="section-title">Workforce Configuration</div>
+
+    <div class="card">
+      <div class="card-title">Global Parameters</div>
+      <div class="params-row">
+        <div class="field">
+          <label>Working Weeks / Year</label>
+          <div class="pfx-wrap">
+            <span class="pfx">wk</span>
+            <input class="inp" type="number" id="workingWeeks" value="48" min="1" max="52" oninput="recalc()" />
+          </div>
+        </div>
+        <div class="field">
+          <label>Overlap Factor <span style="color:#334155;font-size:10px">(prevents double-counting across agents)</span></label>
+          <input class="inp" type="number" id="overlapFactor" value="0.85" min="0" max="1" step="0.01" oninput="recalc()" style="max-width:130px" />
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Geography — Working Hours</div>
+      <table class="wf-table">
+        <thead><tr><th>Region</th><th>Weekly Hours</th><th>Annual Hours / FTE</th></tr></thead>
+        <tbody id="geo-hours-body"></tbody>
+      </table>
+    </div>
+
+    <div class="role-tabs" id="role-tabs"></div>
+    <div id="role-detail-card"></div>
+  </div>
+
+  <!-- PAGE 2 -->
+  <div class="page" id="page-1">
+    <div class="section-title">AI Agent Configuration</div>
+    <div class="agent-grid" id="agent-grid"></div>
+  </div>
+
+  <!-- PAGE 3 -->
+  <div class="page" id="page-2">
+    <div class="section-title">Results Dashboard</div>
+    <div class="grid4" id="kpi-row" style="margin-bottom:18px"></div>
+    <div class="grid2">
+      <div class="card" id="geo-results"></div>
+      <div class="card" id="agent-results"></div>
+    </div>
+    <div class="methodology" id="methodology"></div>
+  </div>
+
+</main>
+
+<script>
+// ═══════════════════════════════════
+// STATE
+// ═══════════════════════════════════
+
+const GEO_META = {
+  "Denmark":       { weeklyHours:37, color:"#C8102E" },
+  "Lithuania":     { weeklyHours:40, color:"#FDB913" },
+  "India":         { weeklyHours:44, color:"#FF9933" },
+  "Rest of World": { weeklyHours:40, color:"#6B7280" },
+};
+const GEOS = Object.keys(GEO_META);
+
+// headcount stored directly per geo per role
+const ROLES = [
+  { id:"dev",  label:"Developers",                     color:"#3B82F6",
+    geo:{ Denmark:36, Lithuania:24, India:42, "Rest of World":18 },
+    salaries:{ Denmark:95, Lithuania:35, India:18, "Rest of World":55 } },
+  { id:"arch", label:"Architects",                     color:"#8B5CF6",
+    geo:{ Denmark:6,  Lithuania:4,  India:7,  "Rest of World":3  },
+    salaries:{ Denmark:120, Lithuania:50, India:28, "Rest of World":75 } },
+  { id:"bfs",  label:"Business Functional Specialists",color:"#10B981",
+    geo:{ Denmark:12, Lithuania:8,  India:14, "Rest of World":6  },
+    salaries:{ Denmark:85, Lithuania:30, India:16, "Rest of World":50 } },
+  { id:"po",   label:"Product Owners",                 color:"#F59E0B",
+    geo:{ Denmark:8,  Lithuania:5,  India:9,  "Rest of World":3  },
+    salaries:{ Denmark:100, Lithuania:42, India:22, "Rest of World":65 } },
+];
+
+const AGENTS = [
+  { id:"coding",   label:"Coding Agent",              icon:"⌨",  roles:["dev","arch"],           hoursSaved:6, adoption:.80, accuracy:.85, costPerUser:50,  enabled:true },
+  { id:"review",   label:"Code Review Agent",         icon:"🔍", roles:["dev","arch"],           hoursSaved:3, adoption:.75, accuracy:.80, costPerUser:30,  enabled:true },
+  { id:"testgen",  label:"Test Generation Agent",     icon:"✓",  roles:["dev"],                  hoursSaved:4, adoption:.70, accuracy:.82, costPerUser:30,  enabled:true },
+  { id:"debug",    label:"Debugging Agent",           icon:"🐛", roles:["dev","arch"],           hoursSaved:3, adoption:.70, accuracy:.80, costPerUser:25,  enabled:true },
+  { id:"docs",     label:"Documentation Agent",       icon:"📄", roles:["dev","bfs","po"],       hoursSaved:2, adoption:.65, accuracy:.85, costPerUser:20,  enabled:true },
+  { id:"req",      label:"Requirements / PRD Agent",  icon:"📋", roles:["bfs","po"],             hoursSaved:3, adoption:.70, accuracy:.80, costPerUser:25,  enabled:true },
+  { id:"arch_des", label:"Architecture Design Agent", icon:"🏗",  roles:["arch"],                 hoursSaved:4, adoption:.60, accuracy:.78, costPerUser:40,  enabled:true },
+  { id:"refactor", label:"Refactoring / Tech Debt",   icon:"♻",  roles:["dev","arch"],           hoursSaved:3, adoption:.65, accuracy:.78, costPerUser:30,  enabled:true },
+  { id:"devops",   label:"DevOps / Deployment Agent", icon:"🚀", roles:["dev","arch"],           hoursSaved:2, adoption:.60, accuracy:.80, costPerUser:30,  enabled:true },
+  { id:"knowledge",label:"Knowledge Retrieval Agent", icon:"💡", roles:["dev","arch","bfs","po"],hoursSaved:2, adoption:.80, accuracy:.88, costPerUser:15,  enabled:true },
+];
+
+let geoHours = {};
+GEOS.forEach(g => { geoHours[g] = GEO_META[g].weeklyHours; });
+let activeRole = "dev";
+let currentPage = 0;
+
+// ═══════════════════════════════════
+// FORMAT
+// ═══════════════════════════════════
+
+const fmt = {
+  currency: n => n >= 1e6 ? `€${(n/1e6).toFixed(2)}M` : n >= 1e3 ? `€${(n/1e3).toFixed(0)}K` : `€${Math.round(n)}`,
+  number:   n => Math.round(n).toLocaleString("en-US"),
+  pct:      n => `${(n*100).toFixed(0)}%`,
+  fte:      n => n.toFixed(1),
+  hours:    n => n >= 1000 ? `${(n/1000).toFixed(1)}K h` : `${Math.round(n)} h`,
+};
+
+// ═══════════════════════════════════
+// HELPERS
+// ═══════════════════════════════════
+
+function ww()  { return parseFloat(document.getElementById("workingWeeks").value)  || 48; }
+function ovf() { return parseFloat(document.getElementById("overlapFactor").value) || 0.85; }
+function roleTotal(role) { return GEOS.reduce((s,g) => s + (role.geo[g]||0), 0); }
+function roleById(id)    { return ROLES.find(r => r.id === id); }
+function agentById(id)   { return AGENTS.find(a => a.id === id); }
+
+// ═══════════════════════════════════
+// COMPUTE
+// ═══════════════════════════════════
+
+function compute() {
+  const W = ww(), OF = ovf();
+  const active = AGENTS.filter(a => a.enabled);
+
+  const geoRaw = {};
+  GEOS.forEach(g => { geoRaw[g] = 0; });
+
+  active.forEach(agent => {
+    GEOS.forEach(g => {
+      let hrs = 0;
+      agent.roles.forEach(rid => {
+        const r = roleById(rid);
+        if (r) hrs += (r.geo[g]||0) * agent.hoursSaved * agent.adoption * agent.accuracy * W;
+      });
+      geoRaw[g] += hrs;
+    });
+  });
+
+  const globalRaw = GEOS.reduce((s,g) => s + geoRaw[g], 0);
+  const globalAdj = globalRaw * OF;
+
+  const geoAdj = {};
+  GEOS.forEach(g => { geoAdj[g] = globalRaw > 0 ? globalAdj * (geoRaw[g]/globalRaw) : 0; });
+
+  const geoFTE = {};
+  GEOS.forEach(g => {
+    const ah = geoHours[g] * W;
+    geoFTE[g] = ah > 0 ? geoAdj[g] / ah : 0;
+  });
+  const totalFTE = GEOS.reduce((s,g) => s + geoFTE[g], 0);
+
+  const geoCost = {};
+  GEOS.forEach(g => {
+    let tp=0, ws=0;
+    ROLES.forEach(r => { const p=r.geo[g]||0; ws+=p*r.salaries[g]; tp+=p; });
+    geoCost[g] = geoAdj[g] * (tp > 0 ? ws/tp : 0);
+  });
+  const totalCost = GEOS.reduce((s,g) => s + geoCost[g], 0);
+
+  const aiCost = active.reduce((sum,agent) => {
+    const users = agent.roles.reduce((s,rid) => {
+      const r = roleById(rid); return s + (r ? roleTotal(r) * agent.adoption : 0);
+    }, 0);
+    return sum + agent.costPerUser * users * 12;
+  }, 0);
+
+  const netSavings = totalCost - aiCost;
+  const payback    = netSavings > 0 ? (aiCost/netSavings)*12 : null;
+
+  const agentSavings = active.map(agent => {
+    let cost=0;
+    GEOS.forEach(g => {
+      let hrs=0;
+      agent.roles.forEach(rid => {
+        const r = roleById(rid);
+        if (r) hrs += (r.geo[g]||0) * agent.hoursSaved * agent.adoption * agent.accuracy * W;
+      });
+      hrs *= OF;
+      let tp=0, ws=0;
+      ROLES.forEach(r => { const p=r.geo[g]||0; ws+=p*r.salaries[g]; tp+=p; });
+      cost += hrs * (tp > 0 ? ws/tp : 0);
+    });
+    return { ...agent, cost };
+  });
+
+  return { geoRaw, geoAdj, geoFTE, totalFTE, geoCost, totalCost,
+           aiCost, netSavings, payback, globalAdj, globalRaw,
+           agentSavings, W, OF };
+}
+
+// ═══════════════════════════════════
+// RENDER — GEO HOURS
+// ═══════════════════════════════════
+
+function renderGeoHours() {
+  const W = ww();
+  document.getElementById("geo-hours-body").innerHTML = GEOS.map(g => `
+    <tr>
+      <td>
+        <div class="geo-cell">
+          <span class="geo-dot" style="background:${GEO_META[g].color}"></span>
+          <span class="geo-name">${g}</span>
+        </div>
+      </td>
+      <td>
+        <input class="ci ci-w80" type="number" min="1" max="80" value="${geoHours[g]}"
+          oninput="geoHours['${g}']=parseFloat(this.value)||1; renderGeoHours(); renderRoleDetail(); updateKPI();" />
+      </td>
+      <td class="mono blue">${fmt.number(geoHours[g] * W)} h</td>
+    </tr>`).join('');
+}
+
+// ═══════════════════════════════════
+// RENDER — ROLE TABS
+// ═══════════════════════════════════
+
+function renderRoleTabs() {
+  document.getElementById("role-tabs").innerHTML = ROLES.map(r => `
+    <button class="role-tab ${r.id===activeRole?'active':''}" style="--rc:${r.color}"
+      onclick="activeRole='${r.id}'; renderRoleTabs(); renderRoleDetail();">
+      ${r.label}
+      <span class="tab-count">${roleTotal(r)}</span>
+    </button>`).join('');
+}
+
+// ═══════════════════════════════════
+// RENDER — ROLE DETAIL
+// ═══════════════════════════════════
+
+function renderRoleDetail() {
+  const role = roleById(activeRole);
+  const W = ww();
+  const total = roleTotal(role);
+
+  const rows = GEOS.map(g => {
+    const pop  = role.geo[g] || 0;
+    const pct  = total > 0 ? (pop/total*100).toFixed(1) : "0.0";
+    const annHrs  = geoHours[g] * W;
+    const annCost = role.salaries[g] * annHrs;
+    return `
+      <tr>
+        <td>
+          <div class="geo-cell">
+            <span class="geo-dot" style="background:${GEO_META[g].color}"></span>
+            <div>
+              <div class="geo-name">${g}</div>
+              <div class="geo-sub">${geoHours[g]}h/wk · ${fmt.number(annHrs)}h/yr per FTE</div>
+            </div>
+          </div>
+        </td>
+        <td>
+          <input class="ci ci-w100" type="number" min="0" value="${pop}"
+            oninput="updateHC('${role.id}','${g}',this.value);" />
+        </td>
+        <td class="mono" style="color:#475569; font-size:12px" id="pct-${role.id}-${g}">${pct}%</td>
+        <td>
+          <div class="euro-wrap">
+            <span class="euro-sym">€</span>
+            <input class="euro-inp" type="number" min="0" value="${role.salaries[g]}"
+              oninput="updateSal('${role.id}','${g}',this.value);" />
+          </div>
+        </td>
+        <td class="ann-cost green" id="ac-${role.id}-${g}">${fmt.currency(annCost)}</td>
+      </tr>`;
+  }).join('');
+
+  const totalSalary = GEOS.reduce((s,g) =>
+    s + (role.salaries[g] * geoHours[g] * W * (role.geo[g]||0)), 0);
+
+  document.getElementById("role-detail-card").innerHTML = `
+    <div class="card">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px">
+        <div class="card-title" style="margin-bottom:0">
+          <span style="width:10px;height:10px;border-radius:50%;background:${role.color};display:inline-block"></span>
+          ${role.label}
+        </div>
+        <div style="display:flex;align-items:center;gap:10px">
+          <span style="font-size:11px;color:#475569">Total headcount:</span>
+          <span class="mono" style="font-size:18px;font-weight:700;color:#f1f5f9" id="total-hc-${role.id}">${total}</span>
+        </div>
+      </div>
+      <div class="overflow-x">
+        <table class="wf-table">
+          <thead>
+            <tr>
+              <th style="min-width:200px">Geography</th>
+              <th>Headcount</th>
+              <th>% of Role</th>
+              <th>€ / Hour</th>
+              <th>Annual Cost / FTE</th>
+            </tr>
+          </thead>
+          <tbody>${rows}</tbody>
+          <tr class="wf-total-row">
+            <td><span class="wf-total-lbl">Total</span></td>
+            <td><span class="wf-total-val" id="total-hc2-${role.id}">${total}</span></td>
+            <td class="mono" style="color:#334155">100%</td>
+            <td></td>
+            <td></td>
+          </tr>
+        </table>
+      </div>
+      <div style="margin-top:14px;padding:11px 16px;background:#060d18;border:1px solid #1e293b;border-radius:8px;display:flex;align-items:center;justify-content:space-between">
+        <span style="font-size:11px;color:#475569">Total annual salary cost — ${role.label}</span>
+        <span class="mono green" style="font-size:16px;font-weight:700" id="total-sal-${role.id}">${fmt.currency(totalSalary)}</span>
+      </div>
+    </div>`;
+}
+
+// ═══════════════════════════════════
+// WORKFORCE MUTATIONS (no full re-render, fast)
+// ═══════════════════════════════════
+
+function updateHC(roleId, geo, raw) {
+  const role = roleById(roleId);
+  role.geo[geo] = Math.max(0, parseInt(raw)||0);
+  const total = roleTotal(role);
+  // update pct cells
+  GEOS.forEach(g => {
+    const el = document.getElementById(`pct-${roleId}-${g}`);
+    if (el) el.textContent = (total>0 ? (role.geo[g]||0)/total*100 : 0).toFixed(1) + '%';
+  });
+  // update total displays
+  [document.getElementById(`total-hc-${roleId}`),
+   document.getElementById(`total-hc2-${roleId}`)].forEach(el => { if(el) el.textContent = total; });
+  // update tab badge
+  const tab = document.querySelector(`.role-tab[onclick*="'${roleId}'"] .tab-count`);
+  if (tab) tab.textContent = total;
+  // update salary footer
+  refreshSalaryFooter(role);
+  updateKPI();
+}
+
+function updateSal(roleId, geo, raw) {
+  const role = roleById(roleId);
+  role.salaries[geo] = parseFloat(raw)||0;
+  // update ann cost cell
+  const el = document.getElementById(`ac-${roleId}-${geo}`);
+  if (el) el.textContent = fmt.currency(role.salaries[geo] * geoHours[geo] * ww());
+  refreshSalaryFooter(role);
+  updateKPI();
+}
+
+function refreshSalaryFooter(role) {
+  const W = ww();
+  const total = GEOS.reduce((s,g) => s + (role.salaries[g] * geoHours[g] * W * (role.geo[g]||0)), 0);
+  const el = document.getElementById(`total-sal-${role.id}`);
+  if (el) el.textContent = fmt.currency(total);
+}
+
+function updateKPI() {
+  const r = compute();
+  const el = document.getElementById("header-net");
+  el.textContent = fmt.currency(r.netSavings);
+  el.style.color = r.netSavings >= 0 ? "#10B981" : "#EF4444";
+  if (currentPage === 2) renderResults();
+}
+
+// ═══════════════════════════════════
+// RENDER — AGENTS
+// ═══════════════════════════════════
+
+function agentEffH(agent) {
+  return Math.round(agent.roles.reduce((s,rid) => {
+    const r = roleById(rid);
+    return s + (r ? roleTotal(r) * agent.hoursSaved * agent.adoption * agent.accuracy : 0);
+  }, 0));
+}
+
+function rolePillsHTML(agent) {
+  return `
+    <div class="roles-section-lbl">Applies to roles</div>
+    <div class="role-pills" id="pills-${agent.id}">
+      ${ROLES.map(r => {
+        const active = agent.roles.includes(r.id);
+        return `<button class="role-pill ${active?'active':''}"
+          style="--pc:${r.color}"
+          onclick="toggleAgentRole('${agent.id}','${r.id}',this)">
+          <span class="pill-dot"></span>${r.label}
+        </button>`;
+      }).join('')}
+    </div>`;
+}
+
+function renderAgents() {
+  document.getElementById("agent-grid").innerHTML = AGENTS.map(a => {
+    return `
+      <div class="agent-card ${a.enabled?'':'off'}" id="ac-${a.id}">
+        <div class="agent-hdr">
+          <div class="agent-meta">
+            <div class="agent-icon-wrap">${a.icon}</div>
+            <div>
+              <div class="agent-name">${a.label}</div>
+            </div>
+          </div>
+          <button class="toggle ${a.enabled?'on':''}" id="tog-${a.id}" onclick="toggleAgent('${a.id}')">
+            <div class="toggle-dot"></div>
+          </button>
+        </div>
+
+        ${rolePillsHTML(a)}
+
+        <div class="slider-row">
+          <div class="slider-hdr"><span class="slider-lbl">Hours saved / user / week</span><span class="slider-val" id="sv-hs-${a.id}">${a.hoursSaved}h</span></div>
+          <input type="range" min="0.5" max="20" step="0.5" value="${a.hoursSaved}"
+            oninput="aSlide('${a.id}','hoursSaved',+this.value,'sv-hs-${a.id}',v=>v+'h')" />
+        </div>
+        <div class="slider-row">
+          <div class="slider-hdr"><span class="slider-lbl">Adoption rate</span><span class="slider-val" id="sv-ar-${a.id}">${fmt.pct(a.adoption)}</span></div>
+          <input type="range" min="0" max="1" step="0.01" value="${a.adoption}"
+            oninput="aSlide('${a.id}','adoption',+this.value,'sv-ar-${a.id}',v=>Math.round(v*100)+'%')" />
+        </div>
+        <div class="slider-row">
+          <div class="slider-hdr"><span class="slider-lbl">Accuracy / realization</span><span class="slider-val" id="sv-ac-${a.id}">${fmt.pct(a.accuracy)}</span></div>
+          <input type="range" min="0" max="1" step="0.01" value="${a.accuracy}"
+            oninput="aSlide('${a.id}','accuracy',+this.value,'sv-ac-${a.id}',v=>Math.round(v*100)+'%')" />
+        </div>
+
+        <div class="agent-footer">
+          <span class="agent-cost-lbl">Cost / user / month</span>
+          <div class="euro-wrap">
+            <span class="euro-sym">€</span>
+            <input class="euro-inp" type="number" min="0" value="${a.costPerUser}"
+              oninput="agentById('${a.id}').costPerUser=parseFloat(this.value)||0; updateKPI();" />
+          </div>
+        </div>
+
+        <div class="agent-preview" id="ap-${a.id}" style="display:${a.enabled?'flex':'none'}">
+          <div>
+            <div class="ap-lbl">Effective hours saved / week (all regions)</div>
+            <div class="ap-val" id="apv-${a.id}">${fmt.number(agentEffH(a))} h/wk</div>
+          </div>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+function toggleAgentRole(agentId, roleId, btn) {
+  const a = agentById(agentId);
+  const idx = a.roles.indexOf(roleId);
+  if (idx === -1) {
+    a.roles.push(roleId);
+    btn.classList.add('active');
+  } else {
+    // prevent deselecting the last role
+    if (a.roles.length === 1) return;
+    a.roles.splice(idx, 1);
+    btn.classList.remove('active');
+  }
+  // refresh preview
+  const pv = document.getElementById(`apv-${agentId}`);
+  if (pv) pv.textContent = fmt.number(agentEffH(a)) + " h/wk";
+  updateKPI();
+}
+
+function aSlide(id, field, value, dispId, fmtFn) {
+  const a = agentById(id);
+  a[field] = value;
+  document.getElementById(dispId).textContent = fmtFn(value);
+  const pv = document.getElementById(`apv-${id}`);
+  if (pv) pv.textContent = fmt.number(agentEffH(a)) + " h/wk";
+  updateKPI();
+}
+
+function toggleAgent(id) {
+  const a = agentById(id);
+  a.enabled = !a.enabled;
+  document.getElementById(`ac-${id}`).classList.toggle("off", !a.enabled);
+  const tog = document.getElementById(`tog-${id}`);
+  tog.classList.toggle("on", a.enabled);
+  document.getElementById(`ap-${id}`).style.display = a.enabled ? "flex" : "none";
+  updateKPI();
+}
+
+// ═══════════════════════════════════
+// RENDER — RESULTS
+// ═══════════════════════════════════
+
+function barChart(items, vk, lk, ck, fmtFn) {
+  const max = Math.max(...items.map(d=>d[vk]), 1);
+  return `<div class="bar-chart">${items.map(d=>`
+    <div class="bar-row">
+      <div class="bar-lbl" title="${d[lk]}">${d[lk]}</div>
+      <div class="bar-track">
+        <div class="bar-fill" style="width:${(d[vk]/max*100).toFixed(1)}%;background:${d[ck]||'#3B82F6'}"></div>
+      </div>
+      <div class="bar-val">${fmtFn(d[vk])}</div>
+    </div>`).join('')}</div>`;
+}
+
+function renderResults() {
+  const r = compute();
+
+  document.getElementById("kpi-row").innerHTML = [
+    { lbl:"Annual Gross Savings",  val:fmt.currency(r.totalCost),   ac:"#10B981" },
+    { lbl:"AI Tool Cost (Annual)", val:fmt.currency(r.aiCost),      ac:"#F59E0B" },
+    { lbl:"Net Annual Savings",    val:fmt.currency(r.netSavings),  ac: r.netSavings>=0?"#3B82F6":"#EF4444" },
+    { lbl:"Total FTE Freed",       val:fmt.fte(r.totalFTE)+" FTE",  ac:"#8B5CF6" },
+  ].map(m=>`
+    <div class="metric-card" style="--ac:${m.ac}">
+      <div class="metric-lbl">${m.lbl}</div>
+      <div class="metric-val">${m.val}</div>
+    </div>`).join('');
+
+  const geoRows = GEOS.map(g=>`
+    <tr>
+      <td><div style="display:flex;align-items:center;gap:8px">
+        <span class="geo-dot" style="background:${GEO_META[g].color}"></span>${g}
+      </div></td>
+      <td class="mono" style="color:#94a3b8">${fmt.hours(r.geoAdj[g])}</td>
+      <td class="mono" style="color:#8B5CF6">${fmt.fte(r.geoFTE[g])}</td>
+      <td class="mono green">${fmt.currency(r.geoCost[g])}</td>
+    </tr>`).join('');
+
+  document.getElementById("geo-results").innerHTML = `
+    <div class="card-title">By Geography</div>
+    <div class="overflow-x">
+      <table>
+        <thead><tr><th>Region</th><th>Adj. Hours</th><th>FTE Freed</th><th>Cost Saved</th></tr></thead>
+        <tbody>
+          ${geoRows}
+          <tr class="tr-tot">
+            <td style="font-size:11px;color:#64748b;text-transform:uppercase;letter-spacing:.06em">Total</td>
+            <td class="mono" style="color:#94a3b8">${fmt.hours(r.globalAdj)}</td>
+            <td class="mono" style="color:#8B5CF6">${fmt.fte(r.totalFTE)}</td>
+            <td class="mono green">${fmt.currency(r.totalCost)}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="divider"></div>
+    <div style="font-size:10px;color:#334155;text-transform:uppercase;letter-spacing:.1em;margin-bottom:10px">FTE Freed by Geography</div>
+    ${barChart(GEOS.map(g=>({label:g,value:r.geoFTE[g],color:GEO_META[g].color})),'value','label','color',fmt.fte)}`;
+
+  const sorted = [...r.agentSavings].sort((a,b)=>b.cost-a.cost);
+  document.getElementById("agent-results").innerHTML = `
+    <div class="card-title">Savings by Agent</div>
+    ${barChart(sorted.map(a=>({label:`${a.icon} ${a.label}`,value:a.cost,color:"#3B82F6"})),'value','label','color',fmt.currency)}
+    <div class="divider"></div>
+    <div class="stat-grid">
+      <div class="stat-box"><div class="stat-box-lbl">Raw Hours (pre-overlap)</div><div class="stat-box-val">${fmt.hours(r.globalRaw)}</div></div>
+      <div class="stat-box"><div class="stat-box-lbl">After Overlap (${fmt.pct(r.OF)})</div><div class="stat-box-val">${fmt.hours(r.globalAdj)}</div></div>
+      <div class="stat-box"><div class="stat-box-lbl">Active Agents</div><div class="stat-box-val">${AGENTS.filter(a=>a.enabled).length} / ${AGENTS.length}</div></div>
+      <div class="stat-box"><div class="stat-box-lbl">Payback Period</div><div class="stat-box-val">${r.payback ? r.payback.toFixed(1)+' months' : '—'}</div></div>
+    </div>`;
+
+  const gStr = GEOS.map(g=>`${g}: ${geoHours[g]}h/wk`).join(', ');
+  document.getElementById("methodology").innerHTML = `
+    <strong>Methodology:</strong>
+    Savings derive solely from time freed: population × hours saved/week × adoption rate × accuracy factor × working weeks.
+    A single global overlap factor of ${fmt.pct(r.OF)} is applied once to the global total to prevent double-counting across agents,
+    then redistributed to geographies proportionally by their raw share.
+    FTE savings use each geography's own annual hours denominator (${gStr}).
+    Cost savings = adjusted hours × blended weighted-average salary/hour per geography.
+    AI tool cost = monthly seat cost × adopted users × 12.
+    Net savings = gross savings − AI tool cost.
+    <strong>No revenue uplift, innovation value, or speculative benefits are included.</strong>`;
+}
+
+// ═══════════════════════════════════
+// NAV + RECALC
+// ═══════════════════════════════════
+
+function setPage(n) {
+  currentPage = n;
+  document.querySelectorAll('.page').forEach((p,i)=>p.classList.toggle('active',i===n));
+  document.querySelectorAll('.nav-btn').forEach((b,i)=>b.classList.toggle('active',i===n));
+  if (n===2) renderResults();
+}
+
+function recalc() {
+  renderGeoHours();
+  renderRoleDetail();
+  updateKPI();
+  if (currentPage===2) renderResults();
+}
+
+// ═══════════════════════════════════
+// BOOT
+// ═══════════════════════════════════
+
+renderGeoHours();
+renderRoleTabs();
+renderRoleDetail();
+renderAgents();
+updateKPI();
+</script>
+</body>
+</html>
