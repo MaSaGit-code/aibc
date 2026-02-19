@@ -375,32 +375,36 @@ const GEO_META = {
 const GEOS = Object.keys(GEO_META);
 
 // headcount stored directly per geo per role
+// Each role also stores the total headcount and geo splits (%) separately,
+// so the UI can drive from either total+pct or per-geo direct entries.
 const ROLES = [
   { id:"dev",  label:"Developers",                     color:"#3B82F6",
-    geo:{ Denmark:36, Lithuania:24, India:42, "Rest of World":18 },
+    geo:{ Denmark:653, Lithuania:725, India:1160, "Rest of World":3 },
     salaries:{ Denmark:95, Lithuania:35, India:18, "Rest of World":55 } },
   { id:"arch", label:"Architects",                     color:"#8B5CF6",
-    geo:{ Denmark:6,  Lithuania:4,  India:7,  "Rest of World":3  },
+    geo:{ Denmark:126, Lithuania:51,  India:61,   "Rest of World":0 },
     salaries:{ Denmark:120, Lithuania:50, India:28, "Rest of World":75 } },
   { id:"bfs",  label:"Business Functional Specialists",color:"#10B981",
-    geo:{ Denmark:12, Lithuania:8,  India:14, "Rest of World":6  },
+    geo:{ Denmark:423, Lithuania:289, India:164,  "Rest of World":32 },
     salaries:{ Denmark:85, Lithuania:30, India:16, "Rest of World":50 } },
   { id:"po",   label:"Product Owners",                 color:"#F59E0B",
-    geo:{ Denmark:8,  Lithuania:5,  India:9,  "Rest of World":3  },
+    geo:{ Denmark:233, Lithuania:86,  India:64,   "Rest of World":21 },
     salaries:{ Denmark:100, Lithuania:42, India:22, "Rest of World":65 } },
 ];
 
 const AGENTS = [
-  { id:"coding",   label:"Coding Agent",              icon:"⌨",  roles:["dev","arch"],           hoursSaved:6, adoption:.80, accuracy:.85, costPerUser:50,  enabled:true },
-  { id:"review",   label:"Code Review Agent",         icon:"🔍", roles:["dev","arch"],           hoursSaved:3, adoption:.75, accuracy:.80, costPerUser:30,  enabled:true },
-  { id:"testgen",  label:"Test Generation Agent",     icon:"✓",  roles:["dev"],                  hoursSaved:4, adoption:.70, accuracy:.82, costPerUser:30,  enabled:true },
-  { id:"debug",    label:"Debugging Agent",           icon:"🐛", roles:["dev","arch"],           hoursSaved:3, adoption:.70, accuracy:.80, costPerUser:25,  enabled:true },
-  { id:"docs",     label:"Documentation Agent",       icon:"📄", roles:["dev","bfs","po"],       hoursSaved:2, adoption:.65, accuracy:.85, costPerUser:20,  enabled:true },
-  { id:"req",      label:"Requirements / PRD Agent",  icon:"📋", roles:["bfs","po"],             hoursSaved:3, adoption:.70, accuracy:.80, costPerUser:25,  enabled:true },
-  { id:"arch_des", label:"Architecture Design Agent", icon:"🏗",  roles:["arch"],                 hoursSaved:4, adoption:.60, accuracy:.78, costPerUser:40,  enabled:true },
-  { id:"refactor", label:"Refactoring / Tech Debt",   icon:"♻",  roles:["dev","arch"],           hoursSaved:3, adoption:.65, accuracy:.78, costPerUser:30,  enabled:true },
-  { id:"devops",   label:"DevOps / Deployment Agent", icon:"🚀", roles:["dev","arch"],           hoursSaved:2, adoption:.60, accuracy:.80, costPerUser:30,  enabled:true },
-  { id:"knowledge",label:"Knowledge Retrieval Agent", icon:"💡", roles:["dev","arch","bfs","po"],hoursSaved:2, adoption:.80, accuracy:.88, costPerUser:15,  enabled:true },
+  // ── ON by default ──────────────────────────────────────────────────────────
+  { id:"coding",   label:"Coding Agent",              icon:"⌨",  roles:["dev","arch"],      hoursSaved:6,    adoption:.80, accuracy:1.0, costPerUser:50, enabled:true },
+  { id:"review",   label:"Code Review Agent",         icon:"🔍", roles:["dev"],             hoursSaved:4,    adoption:.15, accuracy:1.0, costPerUser:30, enabled:true },
+  { id:"testgen",  label:"Test Generation Agent",     icon:"✓",  roles:["dev","bfs"],       hoursSaved:2,    adoption:.80, accuracy:1.0, costPerUser:30, enabled:true },
+  { id:"debug",    label:"Debugging Agent",           icon:"🐛", roles:["dev","arch"],      hoursSaved:3,    adoption:.70, accuracy:1.0, costPerUser:25, enabled:true },
+  { id:"docs",     label:"Documentation Agent",       icon:"📄", roles:["dev","arch"],      hoursSaved:1,    adoption:.80, accuracy:1.0, costPerUser:20, enabled:true },
+  { id:"req",      label:"Requirements / PRD Agent",  icon:"📋", roles:["bfs"],             hoursSaved:4,    adoption:.85, accuracy:1.0, costPerUser:25, enabled:true },
+  { id:"arch_des", label:"Architecture Design Agent", icon:"🏗",  roles:["dev","arch"],      hoursSaved:0.75, adoption:.60, accuracy:1.0, costPerUser:40, enabled:true },
+  { id:"devops",   label:"DevOps / Deployment Agent", icon:"🚀", roles:["dev"],             hoursSaved:2.5,  adoption:.15, accuracy:1.0, costPerUser:30, enabled:true },
+  { id:"knowledge",label:"Knowledge Retrieval Agent", icon:"💡", roles:["dev"],             hoursSaved:10,   adoption:.05, accuracy:1.0, costPerUser:15, enabled:true },
+  // ── OFF by default ─────────────────────────────────────────────────────────
+  { id:"refactor", label:"Refactoring / Tech Debt",   icon:"♻",  roles:["dev","arch"],      hoursSaved:3,    adoption:.65, accuracy:1.0, costPerUser:30, enabled:false },
 ];
 
 let geoHours = {};
@@ -438,70 +442,88 @@ function compute() {
   const W = ww(), OF = ovf();
   const active = AGENTS.filter(a => a.enabled);
 
-  const geoRaw = {};
-  GEOS.forEach(g => { geoRaw[g] = 0; });
-
+  // STEP 1: raw hours saved per geo × role (pre-overlap)
+  const geoRoleRaw = {};
+  GEOS.forEach(g => {
+    geoRoleRaw[g] = {};
+    ROLES.forEach(r => { geoRoleRaw[g][r.id] = 0; });
+  });
   active.forEach(agent => {
     GEOS.forEach(g => {
-      let hrs = 0;
       agent.roles.forEach(rid => {
         const r = roleById(rid);
-        if (r) hrs += (r.geo[g]||0) * agent.hoursSaved * agent.adoption * agent.accuracy * W;
+        if (!r) return;
+        geoRoleRaw[g][rid] += (r.geo[g]||0) * agent.hoursSaved * agent.adoption * agent.accuracy * W;
       });
-      geoRaw[g] += hrs;
     });
   });
 
+  // STEP 2: total raw hours per geo and globally
+  const geoRaw = {};
+  GEOS.forEach(g => {
+    geoRaw[g] = ROLES.reduce((s,r) => s + geoRoleRaw[g][r.id], 0);
+  });
   const globalRaw = GEOS.reduce((s,g) => s + geoRaw[g], 0);
+
+  // STEP 3: apply overlap once globally
   const globalAdj = globalRaw * OF;
 
+  // STEP 4: redistribute adjusted hours to geos proportionally
+  // The overlap factor is applied as a uniform scalar to every cell.
   const geoAdj = {};
-  GEOS.forEach(g => { geoAdj[g] = globalRaw > 0 ? globalAdj * (geoRaw[g]/globalRaw) : 0; });
+  GEOS.forEach(g => {
+    geoAdj[g] = globalRaw > 0 ? globalAdj * (geoRaw[g] / globalRaw) : 0;
+  });
 
+  // STEP 5: FTE saved per geo
   const geoFTE = {};
   GEOS.forEach(g => {
-    const ah = geoHours[g] * W;
-    geoFTE[g] = ah > 0 ? geoAdj[g] / ah : 0;
+    const annHrs = geoHours[g] * W;
+    geoFTE[g] = annHrs > 0 ? geoAdj[g] / annHrs : 0;
   });
   const totalFTE = GEOS.reduce((s,g) => s + geoFTE[g], 0);
 
+  // STEP 6: cost savings = adjusted hours × role-specific salary per geo
+  // KEY: we use the salary of the actual role whose hours were saved,
+  // NOT a blended average across all roles in a region.
   const geoCost = {};
   GEOS.forEach(g => {
-    let tp=0, ws=0;
-    ROLES.forEach(r => { const p=r.geo[g]||0; ws+=p*r.salaries[g]; tp+=p; });
-    geoCost[g] = geoAdj[g] * (tp > 0 ? ws/tp : 0);
+    geoCost[g] = ROLES.reduce((s, r) => {
+      const adjHrs = geoRoleRaw[g][r.id] * OF;
+      return s + adjHrs * r.salaries[g];
+    }, 0);
   });
   const totalCost = GEOS.reduce((s,g) => s + geoCost[g], 0);
 
-  const aiCost = active.reduce((sum,agent) => {
+  // AI tool cost: seat cost × adopted users × 12 months
+  const aiCost = active.reduce((sum, agent) => {
     const users = agent.roles.reduce((s,rid) => {
-      const r = roleById(rid); return s + (r ? roleTotal(r) * agent.adoption : 0);
+      const r = roleById(rid);
+      return s + (r ? roleTotal(r) * agent.adoption : 0);
     }, 0);
     return sum + agent.costPerUser * users * 12;
   }, 0);
 
   const netSavings = totalCost - aiCost;
-  const payback    = netSavings > 0 ? (aiCost/netSavings)*12 : null;
+  const payback    = netSavings > 0 ? (aiCost / netSavings) * 12 : null;
 
+  // Per-agent savings for chart: each agent uses its own hours × role salary
   const agentSavings = active.map(agent => {
-    let cost=0;
+    let cost = 0;
     GEOS.forEach(g => {
-      let hrs=0;
       agent.roles.forEach(rid => {
         const r = roleById(rid);
-        if (r) hrs += (r.geo[g]||0) * agent.hoursSaved * agent.adoption * agent.accuracy * W;
+        if (!r) return;
+        const adjHrs = (r.geo[g]||0) * agent.hoursSaved * agent.adoption * agent.accuracy * W * OF;
+        cost += adjHrs * r.salaries[g];
       });
-      hrs *= OF;
-      let tp=0, ws=0;
-      ROLES.forEach(r => { const p=r.geo[g]||0; ws+=p*r.salaries[g]; tp+=p; });
-      cost += hrs * (tp > 0 ? ws/tp : 0);
     });
     return { ...agent, cost };
   });
 
-  return { geoRaw, geoAdj, geoFTE, totalFTE, geoCost, totalCost,
-           aiCost, netSavings, payback, globalAdj, globalRaw,
-           agentSavings, W, OF };
+  return { geoRaw, geoRoleRaw, geoAdj, geoFTE, totalFTE,
+           geoCost, totalCost, aiCost, netSavings, payback,
+           globalAdj, globalRaw, agentSavings, W, OF };
 }
 
 // ═══════════════════════════════════
@@ -543,14 +565,49 @@ function renderRoleTabs() {
 // RENDER — ROLE DETAIL
 // ═══════════════════════════════════
 
+function computeGeoFromTotalAndPct(role) {
+  // Derive per-geo headcount from total + pct splits, rounded to integers.
+  // The last geo absorbs rounding remainder so total always stays exact.
+  const total = role._total;
+  const splits = role._splits; // {geo: pct 0-100}
+  let remaining = total;
+  const result = {};
+  const geoList = GEOS.slice();
+  geoList.slice(0, -1).forEach(g => {
+    const n = Math.round(total * (splits[g]||0) / 100);
+    result[g] = n;
+    remaining -= n;
+  });
+  result[geoList[geoList.length-1]] = Math.max(0, remaining);
+  return result;
+}
+
+function syncGeoFromSplits(role) {
+  const derived = computeGeoFromTotalAndPct(role);
+  GEOS.forEach(g => { role.geo[g] = derived[g]; });
+}
+
 function renderRoleDetail() {
   const role = roleById(activeRole);
   const W = ww();
-  const total = roleTotal(role);
+
+  // Initialise _total and _splits on first render if not present
+  if (role._total === undefined) {
+    role._total = roleTotal(role);
+    role._splits = {};
+    const t = role._total;
+    GEOS.forEach(g => { role._splits[g] = t > 0 ? parseFloat((role.geo[g]/t*100).toFixed(2)) : 0; });
+  }
+
+  const total = role._total;
+  const splits = role._splits;
+
+  const pctSum = GEOS.reduce((s,g) => s + (splits[g]||0), 0);
+  const pctWarn = Math.abs(pctSum - 100) > 0.5;
 
   const rows = GEOS.map(g => {
-    const pop  = role.geo[g] || 0;
-    const pct  = total > 0 ? (pop/total*100).toFixed(1) : "0.0";
+    const pct = splits[g] !== undefined ? splits[g] : 0;
+    const derived = Math.round(total * pct / 100);
     const annHrs  = geoHours[g] * W;
     const annCost = role.salaries[g] * annHrs;
     return `
@@ -564,11 +621,17 @@ function renderRoleDetail() {
             </div>
           </div>
         </td>
+        <td class="mono" style="color:#94a3b8; font-size:13px; text-align:right; padding-right:18px"
+            id="deriv-${role.id}-${g}">${fmt.number(derived)}</td>
         <td>
-          <input class="ci ci-w100" type="number" min="0" value="${pop}"
-            oninput="updateHC('${role.id}','${g}',this.value);" />
+          <div style="display:flex;align-items:center;gap:6px">
+            <input class="ci" type="number" min="0" max="100" step="0.1"
+              value="${pct}"
+              style="width:72px; text-align:right;"
+              oninput="updatePct('${role.id}','${g}',this.value);" />
+            <span style="color:#475569;font-size:12px">%</span>
+          </div>
         </td>
-        <td class="mono" style="color:#475569; font-size:12px" id="pct-${role.id}-${g}">${pct}%</td>
         <td>
           <div class="euro-wrap">
             <span class="euro-sym">€</span>
@@ -583,16 +646,24 @@ function renderRoleDetail() {
   const totalSalary = GEOS.reduce((s,g) =>
     s + (role.salaries[g] * geoHours[g] * W * (role.geo[g]||0)), 0);
 
+  const pctSumDisp = pctSum.toFixed(1);
+  const pctWarnHtml = pctWarn
+    ? `<span style="color:#F59E0B;font-size:11px;margin-left:8px">⚠ splits sum to ${pctSumDisp}% — should be 100%</span>`
+    : `<span style="color:#334155;font-size:11px;margin-left:8px">∑ ${pctSumDisp}%</span>`;
+
   document.getElementById("role-detail-card").innerHTML = `
     <div class="card">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px">
         <div class="card-title" style="margin-bottom:0">
           <span style="width:10px;height:10px;border-radius:50%;background:${role.color};display:inline-block"></span>
           ${role.label}
         </div>
         <div style="display:flex;align-items:center;gap:10px">
-          <span style="font-size:11px;color:#475569">Total headcount:</span>
-          <span class="mono" style="font-size:18px;font-weight:700;color:#f1f5f9" id="total-hc-${role.id}">${total}</span>
+          <span style="font-size:11px;color:#475569">Total headcount</span>
+          <input class="ci" type="number" min="0" value="${total}"
+            style="width:90px; font-size:16px; font-weight:700; text-align:center;"
+            id="total-hc-inp-${role.id}"
+            oninput="updateTotal('${role.id}',this.value);" />
         </div>
       </div>
       <div class="overflow-x">
@@ -600,8 +671,8 @@ function renderRoleDetail() {
           <thead>
             <tr>
               <th style="min-width:200px">Geography</th>
-              <th>Headcount</th>
-              <th>% of Role</th>
+              <th style="text-align:right;padding-right:18px">Derived HC</th>
+              <th>Split % <span style="font-weight:400;color:#334155">(editable)</span>${pctWarnHtml}</th>
               <th>€ / Hour</th>
               <th>Annual Cost / FTE</th>
             </tr>
@@ -609,8 +680,8 @@ function renderRoleDetail() {
           <tbody>${rows}</tbody>
           <tr class="wf-total-row">
             <td><span class="wf-total-lbl">Total</span></td>
-            <td><span class="wf-total-val" id="total-hc2-${role.id}">${total}</span></td>
-            <td class="mono" style="color:#334155">100%</td>
+            <td class="mono" style="color:#f1f5f9;font-weight:700;text-align:right;padding-right:18px" id="total-hc2-${role.id}">${total}</td>
+            <td style="font-size:11px;color:${pctWarn?'#F59E0B':'#334155'};font-family:monospace" id="pct-sum-${role.id}">${pctSumDisp}%</td>
             <td></td>
             <td></td>
           </tr>
@@ -627,24 +698,44 @@ function renderRoleDetail() {
 // WORKFORCE MUTATIONS (no full re-render, fast)
 // ═══════════════════════════════════
 
-function updateHC(roleId, geo, raw) {
+function updateTotal(roleId, raw) {
   const role = roleById(roleId);
-  role.geo[geo] = Math.max(0, parseInt(raw)||0);
-  const total = roleTotal(role);
-  // update pct cells
-  GEOS.forEach(g => {
-    const el = document.getElementById(`pct-${roleId}-${g}`);
-    if (el) el.textContent = (total>0 ? (role.geo[g]||0)/total*100 : 0).toFixed(1) + '%';
-  });
-  // update total displays
-  [document.getElementById(`total-hc-${roleId}`),
-   document.getElementById(`total-hc2-${roleId}`)].forEach(el => { if(el) el.textContent = total; });
+  role._total = Math.max(0, parseInt(raw)||0);
+  syncGeoFromSplits(role);
+  // update derived headcount cells
+  refreshDerivedCells(role);
   // update tab badge
   const tab = document.querySelector(`.role-tab[onclick*="'${roleId}'"] .tab-count`);
-  if (tab) tab.textContent = total;
-  // update salary footer
+  if (tab) tab.textContent = role._total;
+  // update total footer
+  const el2 = document.getElementById(`total-hc2-${roleId}`);
+  if (el2) el2.textContent = role._total;
   refreshSalaryFooter(role);
   updateKPI();
+}
+
+function updatePct(roleId, geo, raw) {
+  const role = roleById(roleId);
+  role._splits[geo] = parseFloat(raw)||0;
+  syncGeoFromSplits(role);
+  refreshDerivedCells(role);
+  // update pct sum warning
+  const pctSum = GEOS.reduce((s,g) => s + (role._splits[g]||0), 0);
+  const pctWarn = Math.abs(pctSum - 100) > 0.5;
+  const el = document.getElementById(`pct-sum-${roleId}`);
+  if (el) { el.textContent = pctSum.toFixed(1)+'%'; el.style.color = pctWarn ? '#F59E0B' : '#334155'; }
+  refreshSalaryFooter(role);
+  updateKPI();
+}
+
+function refreshDerivedCells(role) {
+  const total = role._total;
+  GEOS.forEach(g => {
+    const el = document.getElementById(`deriv-${role.id}-${g}`);
+    if (el) el.textContent = fmt.number(role.geo[g]||0);
+  });
+  const el2 = document.getElementById(`total-hc2-${role.id}`);
+  if (el2) el2.textContent = total;
 }
 
 function updateSal(roleId, geo, raw) {
